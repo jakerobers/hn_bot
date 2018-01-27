@@ -1,0 +1,4 @@
+#!/bin/bash
+#-F'[/=]'
+#"\t"
+gawk -F'[/=]' 'match($0, /td class="title">.*?href="(.*?)" class=".*?storylink">(.*)<\/a><span/, ary) {print ary[1] "\t" ary[2]}'

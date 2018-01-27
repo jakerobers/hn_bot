@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import socket
+import string
+import click
+
+class IRC:
+    socket = socket.socket()
+
+    def __init__(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    def send(self, chan, msg):
+        self.socket.send(bytes("PRIVMSG " + chan + " :" + msg + "\r\n", "UTF-8"))
+
+    def connect(self, host, port, channel, nick, ident, realname):
+        self.socket.connect((host, port))
+        self.socket.send(bytes("NICK %s\r\n" % nick, "UTF-8"))
+        self.socket.send(bytes("USER %s %s bla :%s\r\n" % (ident, host, realname), "UTF-8"))
+        self.socket.send(bytes("JOIN %s\r\n" %(channel), "UTF-8"));
+
+    def get_text(self):
+        readbuffer = self.socket.recv(1024).decode("UTF-8")
+        temp = str.split(readbuffer, "\n")
+        readbuffer=temp.pop()
+
+        for line in temp:
+            line = str.rstrip(line)
+            line = str.split(line)
+            if(line[0] == "PING"):
+                self.socket.send(bytes("PONG %s\r\n" % line[1], "UTF-8"))
+        return temp
+
+    def close(self):
+        self.socket.close()
+
+
+@click.command()
+@click.option('--host', help='The irc host')
+@click.option('--port', help='The irc port')
+@click.option('--channel', help='The irc channel')
+@click.option('--nick', help='The irc nick')
+@click.option('--ident', help='The irc ident')
+@click.option('--realname', help='The irc realname')
+def main(host, port, channel, nick, ident, realname):
+    if host == None:
+        raise "host not specified."
+
+    if port == None:
+        raise "port not specified."
+
+    if nick == None:
+        raise "nick not specified."
+
+    if ident == None:
+        ident = nick
+
+    if realname == None:
+        realname = nick
+
+
+    irc = IRC()
+    irc.connect(host, int(port), channel, nick, ident, realname)
+
+    text = irc.get_text() # get PING and respond PONG
+
+    for line in sys.stdin:
+        row = line.split("\t")
+        irc.send(channel, row[1])
+        irc.send(channel, "\t" + row[0])
+
+    irc.close()
+
+if __name__ == "__main__":
+    main()
+
